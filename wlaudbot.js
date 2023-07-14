@@ -88,24 +88,24 @@ const observer = new MutationObserver(() => {
     userCommand = userMsgs[0];
     userArguement = userMsgs.slice(1).join(' ');
     userName = $(".chat-head").last().text();
-    isHuman = !(userName === "wlaudbot");
+    isHuman = !(["wlaudbot", "알림", ""].includes(userName));
     isWlaud = userName === "wlaud";
     date = new Date();
 
-    if (!(userName in userDB)) {
-        userDB[userName] = {
-            name: userName,
-            talkmode: "banmo",
-            exp: 10,
-            money: 0,
-            havejonmo: false,
-        };
-        setUserDB();
-    } else {
-        userDB[userName].exp += 10;
-    }
-
     if (isHuman) {
+        if (!(userName in userDB)) {
+            userDB[userName] = {
+                name: userName,
+                talkmode: "banmo",
+                exp: 10,
+                money: 0,
+                havejonmo: false,
+            };
+            setUserDB();
+        } else {
+            userDB[userName].exp += 10;
+        }
+
         if (life || isWlaud) {
             switch (userCommand) {
                 case "지명봇":
@@ -180,6 +180,7 @@ const observer = new MutationObserver(() => {
                             talk(`정보 (이름): ${tm(wL.helpinfo)}`);
                             talk(`모드: ${tm(wL.helptm)}`);
                             talk(`상점: ${tm(wL.helpshop)}`);
+                            talk(`랭킹 (페이지): ${tm(wL.helpranking)}`);
                             talk(`명령어 돈벌기, 명령어 지명봇${tm(wL.help)}`);
                             break;
                         case "돈벌기":
@@ -304,6 +305,19 @@ const observer = new MutationObserver(() => {
                             talk(tm(wL.noitem));
                     };
                     break;
+                case "랭킹":
+                    const page = userArguement || 1;
+                    if (page % 1 != 0 || page <= 0) {
+                        talk(tm(wL.rankingwrongpage));
+                    } else {
+                        talk(`[랭킹] | ${page * 5 - 4}~${page * 5}위`);
+                        Object.entries(userDB)
+                        .sort((a, b) => b[1].exp - a[1].exp)
+                        .slice(page * 5 - 5, page * 5 - 1)
+                        .forEach((item, index) => {
+                            talk(`${page * 5 - 4 + index}위 ${item[1].name} Lv.${Math.floor(item[1].exp / 1000) + 1} ${item[1].exp}점`)
+                        });
+                    }
                 // case "주사위":
                 //     if (userArguement === "") {
                 //         talk(`${dice(6)}${tm(wL.dice)}`);
@@ -365,15 +379,15 @@ const observer = new MutationObserver(() => {
                     talk("지옥에서 돌아왔다...");
                     life = true;
                     break;
+                case "훠이":
+                    if ($('.RoomBox')[0].style.display === 'block') $("#ExitBtn").trigger('click');
+                    break;
             };
-                
-            // if (isFirstMsg("드루와 ")) {
-            //     if (!global.data.place) $(`#room-${noFirstMsg("드루와 ")}`).trigger('click');
-            // };
-            
-            // if (isMsg("훠이")) {
-            //     if (global.data.place) $("#ExitBtn").trigger('click');
-            // };
+            switch (userCommand) {
+                case "드루와":
+                    if ($('.RoomBox')[0].style.display === 'none') $(`#room-${userArguement}`).trigger('click');
+                    break;
+            }
         };
     }
 });

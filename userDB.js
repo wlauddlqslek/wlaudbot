@@ -1,9 +1,16 @@
 window.localStorage.setItem('userDB', JSON.stringify({
-    "wlaud": {
+    wlaud: {
         name: "wlaud",
         talkmode: "banmo",
         exp: 10,
         money: 0,
-        havejonmo: true
+        havejonmo: false
     },
+    yuki_miku: {
+        name: "yuki_miku",
+        talkmode: "jonmo",
+        exp: 10,
+        money: 30000,
+        havejonmo: true
+    }
 }));
