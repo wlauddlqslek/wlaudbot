@@ -4,6 +4,9 @@ let userDB = JSON.parse(window.localStorage.getItem('userDB'));
 let wlaudDB = JSON.parse(window.localStorage.getItem('wlaudDB'));
 
 let userMsg;
+let userMsgs;
+let userCommand;
+let userArguement;
 let userName;
 let isHuman = true;
 let isWlaud = false;
@@ -29,11 +32,16 @@ function noFirstMsg(a) {
     return userMsg.substring(a.length);
 }
 
-// userdb[userName].talkmode에 따라 모드에 맞는 말을 뱉어주는 함수
+// 대화 모드에 해당하는 말을 뱉어주는 함수
 function tm(a) {
     return userDB[userName].talkmode == "banmo" ? a.banmo
     : userDB[userName].talkmode == "jonmo" ? a.jonmo
     : a.banmo;
+}
+
+// [이름]을 유저 이름으로 바꿔주는 함수
+function replaceName(str) {
+    return str.replace(/\[이름\]/g, userName)
 }
 
 // 1~a 사이의 랜덤한 수와 조사를 붙여서 뱉어주는 함수
@@ -75,7 +83,10 @@ const targetNode = document.getElementById('Chat');
 const config = { attributes: true, childList: true, subtree: true };
 const observer = new MutationObserver(() => {
 
-    userMsg =  $(".chat-body").last().text();
+    userMsg = $(".chat-body").last().text();
+    userMsgs = userMsg.split(' ');
+    userCommand = userMsgs[0];
+    userArguement = userMsgs.slice(1).join(' ');
     userName = $(".chat-head").last().text();
     isHuman = !(userName === "wlaudbot");
     isWlaud = userName === "wlaud";
@@ -85,28 +96,104 @@ const observer = new MutationObserver(() => {
         userDB[userName] = {
             name: userName,
             talkmode: "banmo",
-            exp: 0,
+            exp: 10,
             money: 0,
             havejonmo: false,
         };
         setUserDB();
-    };
+    } else {
+        userDB[userName].exp += 10;
+    }
 
     if (isHuman) {
         if (life || isWlaud) {
-            switch (userMsg) {
-                case "지명봇": 
-                    talk(tm(wL.wlaudbot));
+            switch (userCommand) {
+                case "지명봇":
+                    switch (userMsgs[1]) {
+                        case undefined:
+                            talk(tm(wL.wlaudbot));
+                            break;
+                        case "단어":
+                            let wlaudbotAddWord = userMsgs[2];
+                            let wlaudbotAddWordMean = userMsgs.slice(3).join(' ')
+                            if(wlaudbotAddWordMean != "") {
+                                if (!(wlaudbotAddWord in wlaudDB)) {
+                                    wlaudDB[wlaudbotAddWord] = {
+                                    title: wlaudbotAddWordMean,
+                                    teacher: userName,
+                                    time: `${date.getFullYear()}년 ${date.getMonth()+1}월 ${date.getDate()}일 ${date.getHours()}시 ${date.getMinutes()}분 ${date.getSeconds()}초`,
+                                    };
+                                    setwlaudDB();
+                                    talk(tm(wL.wlauddaneook));
+                                } else {
+                                    talk(tm(wL.wlaudalready));
+                                };
+                            } else {
+                                talk(tm(wL.wlaudempty));
+                            };
+                            break;
+                        case "삭제":
+                            let wlaudbotDeleteWord = userMsgs.slice(2).join(' ');
+                            if(wlaudbotDeleteWord in wlaudDB) {
+                                if(wlaudDB[wlaudbotDeleteWord].teacher == userName || isWlaud) {
+                                    delete wlaudDB[wlaudbotDeleteWord];
+                                    setwlaudDB();
+                                    talk(tm(wL.wlauddeleteok));
+                                } else {
+                                    talk(tm(wL.wlaudcantdelete));
+                                };
+                            } else {
+                                talk(tm(wL.wlaudno));
+                            };
+                            break;
+                        case "정보":
+                            let wlaudbotInfoWord = userMsgs.slice(2).join(' ');
+                            if (wlaudbotInfoWord in wlaudDB) {
+                                let wlaudbotInfoWordTeacher = wlaudDB[wlaudbotInfoWord].teacher;
+                                let wlaudbotInfoWordTime = wlaudDB[wlaudbotInfoWord].time;
+                                switch (userDB[wlaudDB[wlaudbotInfoWord].teacher].talkmode) {
+                                    case "banmo":
+                                        talk(`알려준 놈: ${wlaudbotInfoWordTeacher}`);
+                                        talk(`알려준 시간: ${wlaudbotInfoWordTime}`);
+                                        break;
+                                    case "jonmo":
+                                        talk(`알려주신 분: ${wlaudbotInfoWordTeacher}`);
+                                        talk(`알려주신 시간: ${wlaudbotInfoWordTime}`);
+                                        break;
+                                    default:
+                                        talk(`알려준 놈: ${wlaudbotInfoWordTeacher}`);
+                                        talk(`알려준 시간: ${wlaudbotInfoWordTime}`);
+                                };
+                            } else {
+                                talk(tm(wL.wlaudno));
+                            };
+                            break;
+                        default:
+                            let wlaudbotWord = userMsgs.slice(1).join(' ');
+                            talk((wlaudbotWord) in wlaudDB ? replaceName(wlaudDB[wlaudbotWord].title) : tm(wL.wlaudno));
+                    };
                     break;
                 case "명령어":
-                    // talk(`주사위 (수): ${tm(wL.helpdice)}`);
-                    talk(`정보 (id): ${tm(wL.helpinfo)}`);
-                    talk(`모드: ${tm(wL.helptm)}`);
-                    talk(`상점: ${tm(wL.helpshop)}`);
-                    talk(`명령어 돈벌기, 명령어 지명봇${tm(wL.help)}`);
-                    break;
-                /** case "주사위":
-                    talk(`${dice(6)}${tm(wL.dice)}`); */
+                    switch (userArguement) {
+                        case "":
+                            // talk(`주사위 (수): ${tm(wL.helpdice)}`);
+                            talk(`정보 (이름): ${tm(wL.helpinfo)}`);
+                            talk(`모드: ${tm(wL.helptm)}`);
+                            talk(`상점: ${tm(wL.helpshop)}`);
+                            talk(`명령어 돈벌기, 명령어 지명봇${tm(wL.help)}`);
+                            break;
+                        case "돈벌기":
+                            talk(`자퀴: ${tm(wL.helpjaqwi)}`);
+                            // talk(`도박 (돈): ${tm(wL.helpgambl)}`);
+                            break;
+                        case "지명봇":
+                            talk(`지명봇 (단어): ${tm(wL.helpwlaudbot)}`);
+                            talk(`지명봇 단어 (단어) (뜻): ${tm(wL.helpwlaudbotdaneo)}`);
+                            talk(`지명봇 정보 (단어): ${tm(wL.helpwlaudbotinfo)}`);
+                            break;
+                        default:
+                            talk(tm(wL.nohelp));
+                    };
                     break;
                 case "자퀴":
                     if (!jaqwiing) {
@@ -130,29 +217,63 @@ const observer = new MutationObserver(() => {
                     if (jaqwiing) {
                         jaqwiing = false;
             
+                        
+                        userDB[userName].exp += 100;
                         userDB[userName].money += 1000;
                         setUserDB();
             
                         clearTimeout(jaqwiFail);
             
-                        talk(`${userName}${tm(wL.nim)} 정답! ${userName}${tm(wL.nim)}의 돈: ${userDB[userName].money}원 (+1000원)`);
+                        talk(`${userName}${tm(wL.nim)} 정답! Lv.${Math.floor(userDB[userName].exp / 1000) + 1} ${userDB[userName].exp}/${userDB[userName].exp + 1000 - (userDB[userName].exp % 1000)}점 (+100점)  / 돈: ${userDB[userName].money}원 (+1000원)`);
                         talk(`정답: ${jaqwiWord}`);
                     };
                     break;
-                case "도박":
-                    talk(tm(wL.emptymoney));
-                    break;
                 case "정보":
-                    talk(`${userName}님의 정보`);
-                    talk(`돈: ${userDB[userName].money}원`);
+                    switch (userArguement) {
+                        case "":
+                            let infouser = userDB[userName];
+                            talk(`${userName}${tm(wL.nim)}의 정보`);
+                            talk(`Lv.${Math.floor(infouser.exp / 1000) + 1} ${infouser.exp}/${infouser.exp + 1000 - (infouser.exp % 1000)}점`);
+                            talk(`돈: ${infouser.money}원`);
+                            break;
+                        default:
+                            if (userArguement in userDB) {
+                                let infouser = userDB[userArguement];
+                                talk(`${infouser.name}${tm(wL.nim)}의 정보`);
+                                talk(`Lv.${Math.floor(infouser.exp / 1000) + 1} ${infouser.exp}/${infouser.exp + 1000 - (infouser.exp % 1000)}점`);
+                                talk(`돈: ${infouser.money}원`);
+                            } else {
+                                talk(tm(wL.infono));
+                            };
+                    }
                     break;
                 case "모드":
-                    talk(`[대화 모드] ㅣ 모드 (모드 이름)${tm(wL.tm)}`);
-                    let isbanmo = userDB[userName].talkmode == "banmo" ? "[반모] (적용 중)" : "[반모]";
-                    let isjonmo = userDB[userName].talkmode == "jonmo" ? "[존모] (적용 중)"
-                    : userDB[userName].havejonmo ? "[존모]"
-                    : "[존모] (미구입)";
-                    talk(`${isbanmo} / ${isjonmo}`);
+                    switch (userArguement) {
+                        case "":
+                            let isbanmo = userDB[userName].talkmode == "banmo" ? "[반모] (적용 중)" : "[반모]";
+                            let isjonmo = userDB[userName].talkmode == "jonmo" ? "[존모] (적용 중)"
+                            : userDB[userName].havejonmo ? "[존모]"
+                            : "[존모] (미구입)";
+                            talk(`[대화 모드] ㅣ 모드 (모드 이름)${tm(wL.tm)}`);
+                            talk(`${isbanmo} / ${isjonmo}`);
+                            break;
+                        case "반모":
+                            userDB[userName].talkmode = "banmo"
+                            setUserDB();
+                            talk(tm(wL.tmupdate));
+                            break;
+                        case "존모":
+                            if (userDB[userName].havejonmo == true) {
+                                userDB[userName].talkmode = "jonmo"
+                                setUserDB();
+                                talk(tm(wL.tmupdate));
+                            } else {
+                                talk(tm(wL.nohave));
+                            };
+                            break;
+                        default:
+                            talk(tm(wL.notm));
+                    };
                     break;
                 case "상점":
                     talk(`[상점] ㅣ 구입 (구입할 것)${tm(wL.shop)}`)
@@ -161,207 +282,98 @@ const observer = new MutationObserver(() => {
                     : talk(`[존모]: 존댓말 모드${tm(wL.abletm)} / 5000원`);
                     break;
                 case "구입":
-                    talk(`구입 (구입할 것)${tm(wL.shop)}`);
-                    break;
-            }
-
-            if (isFirstMsg("명령어 ")) {
-                switch (noFirstMsg("명령어 ")) {
-                    case "돈벌기":
-                        talk(`자퀴: ${tm(wL.helpjaqwi)}`);
-                        // talk(`도박 (돈): ${tm(wL.helpgambl)}`);
-                        break;
-                    case "지명봇":
-                        talk(`지명봇 (단어): ${tm(wL.helpwlaudbot)}`);
-                        talk(`지명봇 단어 (단어) (뜻): ${tm(wL.helpwlaudbotdaneo)}`);
-                        talk(`지명봇 정보 (단어): ${tm(wL.helpwlaudbotinfo)}`);
-                        break;
-                    default:
-                        talk(tm(wL.nohelp));
-                };
-            };
-            /**
-            if (isFirstMsg("주사위 ")) {
-                let a = Number(noFirstMsg("주사위 "));
-                a % 1 == 0 && a > 0 && a < 1000000000000
-                ? talk(`${dice(noFirstMsg("주사위 "))}${tm(wL.dice)}`)
-                : talk(tm(wL.dicesidesrange));
-            }
-            
-            if (isFirstMsg("따라해 ")) {
-                talk(noFirstMsg("따라해 "));
-            }
-            
-            if (isFirstMsg("도박 ")) {
-                let userMoney = userDB[userName].money;
-                switch (noFirstMsg("도박 ")) {
-                    case "올인":
-                        if (userMoney < 1000) {
-                            talk(tm(wL.mmoney));
-                        } else if (Math.floor(2*Math.random()) == 0) {
-                            talk(`${tm(wL.gamblwin)} ${userName}${tm(wL.nim)}의 돈: ${userMoney * 2}원 (+${userMoney}원)`);
-                            userDB[userName].money *= 2;
-                            setUserDB();
-                        } else {
-                            talk(`${tm(wL.gambllose)} ${userName}${tm(wL.nim)}의 돈: 0원 (-${userMoney}원)`);
-                            userDB[userName].money = 0;
-                            setUserDB();
-                        };
-                        break;
-                    default:
-                        let gamblmoney = Number(noFirstMsg("도박 "))
-                        if (gamblmoney % 1 != 0) {
-                            talk(tm(wL.notmoney));
-                        } else if (gamblmoney < 1000) {
-                            talk(tm(wL.mmoney));
-                        } else if (gamblmoney > userDB[userName].money) {
-                            talk(tm(wL.lessmoney));
-                        } else if (Math.floor(2*Math.random()) == 0) {
-                            talk(`${tm(wL.gamblwin)} ${userName}${tm(wL.nim)}의 돈: ${userMoney + gamblmoney}원 (+${gamblmoney}원)`);
-                            userDB[userName].money += gamblmoney;
-                            setUserDB();
-                        } else {
-                            talk(`${tm(wL.gambllose)} ${userName}${tm(wL.nim)}의 돈: ${userMoney - gamblmoney}원 (-${gamblmoney}원)`);
-                            userDB[userName].money -= gamblmoney;
-                            setUserDB();
-                        }
-                }
-            };
-            */
-            
-            if (isFirstMsg("정보 ")) {
-                let infouser = userDB[noFirstMsg("정보 ")];
-                if (typeof infouser !== undefined) {
-                    talk(`${infouser.name}${tm(wL.nim)}의 정보`);
-                    talk(`돈: ${infouser.money}원`);
-                } else {
-                    talk(tm(wL.infono));
-                };
-            };
-
-            if (isFirstMsg("모드 ")) {
-                switch (noFirstMsg("모드 ")) {
-                    case "반모":
-                        userDB[userName].talkmode = "banmo"
-                        setUserDB();
-                        talk(tm(wL.tmupdate));
-                        break;
-                    case "존모":
-                        if (userDB[userName].havejonmo == true) {
-                            userDB[userName].talkmode = "jonmo"
-                            setUserDB();
-                            talk(tm(wL.tmupdate));
-                        } else {
-                            talk(tm(wL.nohave));
-                        };
-                        break;
-                    default:
-                        talk(tm(wL.notm));
-                };
-            };
-            
-            if (isFirstMsg("구입 ")) {
-                switch (noFirstMsg("구입 ")) {
-                    case "존모":
-                        if (userDB[userName].havejonmo == true) {
-                            talk(tm(wL.alreadybuy));
-                        } else {
-                            if (userDB[userName].money < 5000) {
-                                talk(tm(wL.nomoney));
+                    switch (userArguement) {
+                        case "":
+                            talk(`구입 (구입할 것)${tm(wL.shop)}`);
+                            break;
+                        case "존모":
+                            if (userDB[userName].havejonmo == true) {
+                                talk(tm(wL.alreadybuy));
                             } else {
-                                userDB[userName].money -= 5000;
-                                userDB[userName].havejonmo = true;
-                                talk(tm(wL.buy));
-                                setUserDB();
-                            };
-                        };
-                        break;
-                    default:
-                        talk(tm(wL.noitem));
-                };
-            };
-
-            if (isFirstMsg("지명봇 ")) {
-                switch (noFirstMsg("지명봇 ").split(' ')[0]) {
-                    case "단어":
-                        let wlaudbotWord = noFirstMsg("지명봇 단어 ").split(' ')[0];
-                        let wlaudbotWordMean = noFirstMsg("지명봇 단어 " + wlaudbotWord);
-                        if(wlaudbotWordMean != '') {
-                            if (!(wlaudbotWord in wlaudDB)) {
-                                wlaudDB[wlaudbotWord] = {
-                                title: wlaudbotWordMean,
-                                teachername: userName,
-                                time: `${date.getFullYear()}년 ${date.getMonth()+1}월 ${date.getDate()}일 ${date.getHours()}시 ${date.getMinutes()}분 ${date.getSeconds()}초`,
+                                if (userDB[userName].money < 5000) {
+                                    talk(tm(wL.nomoney));
+                                } else {
+                                    userDB[userName].money -= 5000;
+                                    userDB[userName].havejonmo = true;
+                                    talk(tm(wL.buy));
+                                    setUserDB();
                                 };
-                                setwlaudDB();
-                                talk(tm(wL.wlauddaneook));
-                            } else {
-                                talk(tm(wL.wlaudalready));
                             };
-                        } else {
-                            talk(tm(wL.wlaudempty));
-                        };
-                        break;
-                    case "삭제":
-                        let wlaudbotDeleteWord = noFirstMsg("지명봇 삭제 ");
-                        if(wlaudbotDeleteWord in wlaudDB) {
-                            if(wlaudDB[wlaudbotDeleteWord].teachername == userName || isWlaud) {
-                                delete wlaudDB[wlaudbotDeleteWord];
-                                setwlaudDB();
-                                talk(tm(wL.wlauddeleteok));
-                            } else {
-                                talk(tm(wL.wlaudcantdelete));
-                            };
-                        } else {
-                            talk(tm(wL.wlaudno));
-                        };
-                        break;
-                    case "정보":
-                        let wlaudbotInfoWord = noFirstMsg("지명봇 정보 ");
-                        if (wlaudbotInfoWord in wlaudDB) {
-                            switch (userDB[wlaudDB[wlaudbotInfoWord].teachername].talkmode) {
-                                case "banmo":
-                                    talk(`알려준 놈: ${wlaudDB[wlaudbotInfoWord].teachername}`);
-                                    talk(`알려준 시간: ${wlaudDB[wlaudbotInfoWord].time}`);
-                                    break;
-                                case "jonmo":
-                                    talk(`알려주신 분: ${wlaudDB[wlaudbotInfoWord].teachername}`);
-                                    talk(`알려주신 시간: ${wlaudDB[wlaudbotInfoWord].time}`);
-                                    break;
-                                default:
-                                    talk(`알려준 놈: ${wlaudDB[wlaudbotInfoWord].teachername}`);
-                                    talk(`알려준 시간: ${wlaudDB[wlaudbotInfoWord].time}`);
-                            };
-                        } else {
-                            talk(tm(wL.wlaudno));
-                        };
-                        break;
-                    default:
-                        noFirstMsg("지명봇 ") in wlaudDB
-                        ? talk(wlaudDB[noFirstMsg("지명봇 ")].title.replace(/\[이름\]/g, userName))
-                        : talk(tm(wL.wlaudno));
-                }
-            };
+                            break;
+                        default:
+                            talk(tm(wL.noitem));
+                    };
+                    break;
+                // case "주사위":
+                //     if (userArguement === "") {
+                //         talk(`${dice(6)}${tm(wL.dice)}`);
+                //     } else {
+                //         let a = Number(userArguement);
+                //         a % 1 == 0 && a > 0 && a < 1000000000000
+                //         ? talk(`${dice(noFirstMsg("주사위 "))}${tm(wL.dice)}`)
+                //         : talk(tm(wL.dicesidesrange));
+                //     }
+                //     break;
+                // case "도박":
+                //     let userMoney = userDB[userName].money;
+                //     switch (userArguement) {
+                //         case "":
+                //             talk(tm(wL.emptymoney));
+                //             break;
+                //         case "올인":
+                //             if (userMoney < 1000) {
+                //                 talk(tm(wL.mmoney));
+                //             } else if (Math.floor(2*Math.random()) == 0) {
+                //                 talk(`${tm(wL.gamblwin)} ${userName}${tm(wL.nim)}의 돈: ${userMoney * 2}원 (+${userMoney}원)`);
+                //                 userDB[userName].money *= 2;
+                //                 setUserDB();
+                //             } else {
+                //                 talk(`${tm(wL.gambllose)} ${userName}${tm(wL.nim)}의 돈: 0원 (-${userMoney}원)`);
+                //                 userDB[userName].money = 0;
+                //                 setUserDB();
+                //             };
+                //             break;
+                //         default:
+                //             let gamblmoney = Number(noFirstMsg("도박 "))
+                //             if (gamblmoney % 1 != 0) {
+                //                 talk(tm(wL.notmoney));
+                //             } else if (gamblmoney < 1000) {
+                //                 talk(tm(wL.mmoney));
+                //             } else if (gamblmoney > userDB[userName].money) {
+                //                 talk(tm(wL.lessmoney));
+                //             } else if (Math.floor(2*Math.random()) == 0) {
+                //                 talk(`${tm(wL.gamblwin)} ${userName}${tm(wL.nim)}의 돈: ${userMoney + gamblmoney}원 (+${gamblmoney}원)`);
+                //                 userDB[userName].money += gamblmoney;
+                //                 setUserDB();
+                //             } else {
+                //                 talk(`${tm(wL.gambllose)} ${userName}${tm(wL.nim)}의 돈: ${userMoney - gamblmoney}원 (-${gamblmoney}원)`);
+                //                 userDB[userName].money -= gamblmoney;
+                //                 setUserDB();
+                //             }
+                //     }
+                //     break;
+            }
         };
 
         if (isWlaud) {
-            /**if (isFirstMsg("드루와 ")) {
-                if (!global.data.place) $(`#room-${noFirstMsg("드루와 ")}`).trigger('click');
+            switch (userMsg) {
+                case "핫하 죽어라":
+                    talk("크아아아악");
+                    life = false;
+                    break;
+                case "어이 살아라":
+                    talk("지옥에서 돌아왔다...");
+                    life = true;
+                    break;
             };
+                
+            // if (isFirstMsg("드루와 ")) {
+            //     if (!global.data.place) $(`#room-${noFirstMsg("드루와 ")}`).trigger('click');
+            // };
             
-            if (isMsg("훠이")) {
-                if (global.data.place) $("#ExitBtn").trigger('click');
-            };
-            
-            if (isMsg("핫하 죽어라")) {
-                talk("크아아아악");
-                life = false;
-            };
-            
-            if (isMsg("어이 살아라")) {
-                talk("지옥에서 돌아왔다...");
-                life = true;
-            };*/
+            // if (isMsg("훠이")) {
+            //     if (global.data.place) $("#ExitBtn").trigger('click');
+            // };
         };
     }
 });
