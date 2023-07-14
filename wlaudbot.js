@@ -1,4 +1,5 @@
 const jaqwiDB = JSON.parse(window.localStorage.getItem('jaqwiDB'));
+const wordDB = JSON.parse(window.localStorage.getItem('wordDB'));
 const wL = JSON.parse(window.localStorage.getItem('wL'));
 let userDB = JSON.parse(window.localStorage.getItem('userDB'));
 let wlaudDB = JSON.parse(window.localStorage.getItem('wlaudDB'));
@@ -176,21 +177,32 @@ const observer = new MutationObserver(() => {
                 case "명령어":
                     switch (userArguement) {
                         case "":
-                            // talk(`주사위 (수): ${tm(wL.helpdice)}`);
+                        case "1":
+                            talk(`[명령어] 1페이지 | 3/5`)
                             talk(`정보 (이름): ${tm(wL.helpinfo)}`);
                             talk(`모드: ${tm(wL.helptm)}`);
                             talk(`상점: ${tm(wL.helpshop)}`);
+                            talk(`명령어 (1/2/돈벌기/지명봇)${tm(wL.help)}`);
+                            break;
+                        case "2":
+                            talk(`[명령어] 2페이지 | 5/5`)
                             talk(`랭킹 (페이지): ${tm(wL.helpranking)}`);
-                            talk(`명령어 돈벌기, 명령어 지명봇${tm(wL.help)}`);
+                            talk(`검색 (정규식) (페이지): ${tm(wL.helpsearch)}`);
+                            // talk(`주사위 (수): ${tm(wL.helpdice)}`);
+                            talk(`명령어 (1/2/돈벌기/지명봇)${tm(wL.help)}`);
                             break;
                         case "돈벌기":
+                            talk(`[명령어] 돈벌기 페이지 | 1/1`)
                             talk(`자퀴: ${tm(wL.helpjaqwi)}`);
                             // talk(`도박 (돈): ${tm(wL.helpgambl)}`);
+                            talk(`명령어 (1/2/돈벌기/지명봇)${tm(wL.help)}`);
                             break;
                         case "지명봇":
+                            talk(`[명령어] 지명봇 페이지 | 3/3`)
                             talk(`지명봇 (단어): ${tm(wL.helpwlaudbot)}`);
                             talk(`지명봇 단어 (단어) (뜻): ${tm(wL.helpwlaudbotdaneo)}`);
                             talk(`지명봇 정보 (단어): ${tm(wL.helpwlaudbotinfo)}`);
+                            talk(`명령어 (1/2/돈벌기/지명봇)${tm(wL.help)}`);
                             break;
                         default:
                             talk(tm(wL.nohelp));
@@ -306,18 +318,32 @@ const observer = new MutationObserver(() => {
                     };
                     break;
                 case "랭킹":
-                    const page = userArguement || 1;
-                    if (page % 1 != 0 || page <= 0) {
-                        talk(tm(wL.rankingwrongpage));
+                    const rankingPage = userArguement || 1;
+                    if (rankingPage % 1 != 0 || rankingPage <= 0) {
+                        talk(tm(wL.wrongpage));
                     } else {
-                        talk(`[랭킹] | ${page * 5 - 4}~${page * 5}위`);
+                        talk(`[랭킹] ${rankingPage}페이지 | ${rankingPage * 5 - 4}~${rankingPage * 5}위`);
                         Object.entries(userDB)
                         .sort((a, b) => b[1].exp - a[1].exp)
-                        .slice(page * 5 - 5, page * 5 - 1)
+                        .slice(rankingPage * 5 - 5, rankingPage * 5)
                         .forEach((item, index) => {
-                            talk(`${page * 5 - 4 + index}위 ${item[1].name} Lv.${Math.floor(item[1].exp / 1000) + 1} ${item[1].exp}점`)
+                            talk(`${rankingPage * 5 - 4 + index}위 ${item[1].name} Lv.${Math.floor(item[1].exp / 1000) + 1} ${item[1].exp}점`)
                         });
                     }
+                    break;
+                case "검색":
+                    const searchPage = userMsgs[2] || 1;
+                    if (searchPage % 1 != 0 || searchPage <= 0) {
+                        talk(tm(wL.wrongpage));
+                    } else {
+                        const words = wordDB.filter(str => new RegExp(userMsgs[1]).test(str))
+                        talk(`[검색] ${searchPage}페이지 | ${searchPage * 5 > words.length ? words.length : searchPage * 5}/${words.length}`);
+                        words.slice(searchPage * 5 - 5, searchPage * 5)
+                        .forEach(item => {
+                            talk(item);
+                        });
+                    }
+                    break;
                 // case "주사위":
                 //     if (userArguement === "") {
                 //         talk(`${dice(6)}${tm(wL.dice)}`);
