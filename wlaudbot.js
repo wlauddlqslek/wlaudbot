@@ -47,7 +47,7 @@ function replaceName(str) {
 
 // 1~a 사이의 랜덤한 수와 조사를 붙여서 뱉어주는 함수
 function dice(a) {
-    let dicenumber = Math.floor(a*Math.random()) + 1;
+    const dicenumber = Math.floor(a*Math.random()) + 1;
     return [1, 3, 6, 7, 8, 0].includes(dicenumber % 10)
     ? `${dicenumber}이`
     : `${dicenumber}가`
@@ -115,8 +115,8 @@ const observer = new MutationObserver(() => {
                             talk(tm(wL.wlaudbot));
                             break;
                         case "단어":
-                            let wlaudbotAddWord = userMsgs[2];
-                            let wlaudbotAddWordMean = userMsgs.slice(3).join(' ')
+                            const wlaudbotAddWord = userMsgs[2];
+                            const wlaudbotAddWordMean = userMsgs.slice(3).join(' ')
                             if(wlaudbotAddWordMean != "") {
                                 if (!(wlaudbotAddWord in wlaudDB)) {
                                     wlaudDB[wlaudbotAddWord] = {
@@ -134,7 +134,7 @@ const observer = new MutationObserver(() => {
                             };
                             break;
                         case "삭제":
-                            let wlaudbotDeleteWord = userMsgs.slice(2).join(' ');
+                            const wlaudbotDeleteWord = userMsgs.slice(2).join(' ');
                             if(wlaudbotDeleteWord in wlaudDB) {
                                 if(wlaudDB[wlaudbotDeleteWord].teacher == userName || isWlaud) {
                                     delete wlaudDB[wlaudbotDeleteWord];
@@ -148,10 +148,10 @@ const observer = new MutationObserver(() => {
                             };
                             break;
                         case "정보":
-                            let wlaudbotInfoWord = userMsgs.slice(2).join(' ');
+                            const wlaudbotInfoWord = userMsgs.slice(2).join(' ');
                             if (wlaudbotInfoWord in wlaudDB) {
-                                let wlaudbotInfoWordTeacher = wlaudDB[wlaudbotInfoWord].teacher;
-                                let wlaudbotInfoWordTime = wlaudDB[wlaudbotInfoWord].time;
+                                const wlaudbotInfoWordTeacher = wlaudDB[wlaudbotInfoWord].teacher;
+                                const wlaudbotInfoWordTime = wlaudDB[wlaudbotInfoWord].time;
                                 switch (userDB[wlaudDB[wlaudbotInfoWord].teacher].talkmode) {
                                     case "banmo":
                                         talk(`알려준 놈: ${wlaudbotInfoWordTeacher}`);
@@ -170,7 +170,7 @@ const observer = new MutationObserver(() => {
                             };
                             break;
                         default:
-                            let wlaudbotWord = userMsgs.slice(1).join(' ');
+                            const wlaudbotWord = userMsgs.slice(1).join(' ');
                             talk((wlaudbotWord) in wlaudDB ? replaceName(wlaudDB[wlaudbotWord].title) : tm(wL.wlaudno));
                     };
                     break;
@@ -182,27 +182,35 @@ const observer = new MutationObserver(() => {
                             talk(`정보 (이름): ${tm(wL.helpinfo)}`);
                             talk(`모드: ${tm(wL.helptm)}`);
                             talk(`상점: ${tm(wL.helpshop)}`);
-                            talk(`명령어 (1/2/돈벌기/지명봇)${tm(wL.help)}`);
+                            talk(`명령어 (1/2/돈벌기/지명봇/정규식)${tm(wL.help)}`);
                             break;
                         case "2":
                             talk(`[명령어] 2페이지 | 5/5`)
                             talk(`랭킹 (페이지): ${tm(wL.helpranking)}`);
                             talk(`검색 (정규식) (페이지): ${tm(wL.helpsearch)}`);
                             // talk(`주사위 (수): ${tm(wL.helpdice)}`);
-                            talk(`명령어 (1/2/돈벌기/지명봇)${tm(wL.help)}`);
+                            talk(`명령어 (1/2/돈벌기/지명봇/정규식)${tm(wL.help)}`);
                             break;
                         case "돈벌기":
                             talk(`[명령어] 돈벌기 페이지 | 1/1`)
                             talk(`자퀴: ${tm(wL.helpjaqwi)}`);
                             // talk(`도박 (돈): ${tm(wL.helpgambl)}`);
-                            talk(`명령어 (1/2/돈벌기/지명봇)${tm(wL.help)}`);
+                            talk(`명령어 (1/2/돈벌기/지명봇/정규식)${tm(wL.help)}`);
                             break;
                         case "지명봇":
                             talk(`[명령어] 지명봇 페이지 | 3/3`)
                             talk(`지명봇 (단어): ${tm(wL.helpwlaudbot)}`);
                             talk(`지명봇 단어 (단어) (뜻): ${tm(wL.helpwlaudbotdaneo)}`);
                             talk(`지명봇 정보 (단어): ${tm(wL.helpwlaudbotinfo)}`);
-                            talk(`명령어 (1/2/돈벌기/지명봇)${tm(wL.help)}`);
+                            talk(`명령어 (1/2/돈벌기/지명봇/정규식)${tm(wL.help)}`);
+                            break;
+                        case "정규식":
+                            talk(`[명령어] 정규식 페이지 | 검색 (정규식) (페이지)에 쓰이는 정규식입니다. | 3/3`)
+                            talk(`^(단어): (단어)로 시작함. | (단어): (단어)가 포함됨. | (단어)$: (단어)로 끝남.　　　　　　　　　　　　　　　　 .*: 아무 단어가 있거나 없음. | (.): 아무 문자를 저장함. | \\1: 그 문자가 포함됨.`);
+                            talk(``);
+                            talk(`예시1: ^이.*라.*어$ ->'이'로 시작하고 '라'가 2개 들어가고 '어'로 끝남.`);
+                            talk(`예시2: ^(.).*\\1$ -> 시작 글자와 끝 글자가 같음.`);
+                            talk(`명령어 (1/2/돈벌기/지명봇/정규식)${tm(wL.help)}`);
                             break;
                         default:
                             talk(tm(wL.nohelp));
@@ -211,13 +219,13 @@ const observer = new MutationObserver(() => {
                 case "자퀴":
                     if (!jaqwiing) {
                         jaqwiing = true;
-        
+
                         jaqwiTheme = random(Object.keys(jaqwiDB));
                         jaqwiWord = random(jaqwiDB[jaqwiTheme].words);
         
                         jaqwiFail = setTimeout(function() {
                             jaqwiing = false;
-                            talk(tm(wL.jaqwifail));
+                            talk(`타임 오버!`);
                             talk(`정답: ${jaqwiWord}`);
                         }, 10000);
         
@@ -244,14 +252,14 @@ const observer = new MutationObserver(() => {
                 case "정보":
                     switch (userArguement) {
                         case "":
-                            let infouser = userDB[userName];
+                            const infouser = userDB[userName];
                             talk(`${userName}${tm(wL.nim)}의 정보`);
                             talk(`Lv.${Math.floor(infouser.exp / 1000) + 1} ${infouser.exp}/${infouser.exp + 1000 - (infouser.exp % 1000)}점`);
                             talk(`돈: ${infouser.money}원`);
                             break;
                         default:
                             if (userArguement in userDB) {
-                                let infouser = userDB[userArguement];
+                                const infouser = userDB[userArguement];
                                 talk(`${infouser.name}${tm(wL.nim)}의 정보`);
                                 talk(`Lv.${Math.floor(infouser.exp / 1000) + 1} ${infouser.exp}/${infouser.exp + 1000 - (infouser.exp % 1000)}점`);
                                 talk(`돈: ${infouser.money}원`);
@@ -263,8 +271,8 @@ const observer = new MutationObserver(() => {
                 case "모드":
                     switch (userArguement) {
                         case "":
-                            let isbanmo = userDB[userName].talkmode == "banmo" ? "[반모] (적용 중)" : "[반모]";
-                            let isjonmo = userDB[userName].talkmode == "jonmo" ? "[존모] (적용 중)"
+                            const isbanmo = userDB[userName].talkmode == "banmo" ? "[반모] (적용 중)" : "[반모]";
+                            const isjonmo = userDB[userName].talkmode == "jonmo" ? "[존모] (적용 중)"
                             : userDB[userName].havejonmo ? "[존모]"
                             : "[존모] (미구입)";
                             talk(`[대화 모드] ㅣ 모드 (모드 이름)${tm(wL.tm)}`);
@@ -348,14 +356,14 @@ const observer = new MutationObserver(() => {
                 //     if (userArguement === "") {
                 //         talk(`${dice(6)}${tm(wL.dice)}`);
                 //     } else {
-                //         let a = Number(userArguement);
+                //         const a = Number(userArguement);
                 //         a % 1 == 0 && a > 0 && a < 1000000000000
                 //         ? talk(`${dice(noFirstMsg("주사위 "))}${tm(wL.dice)}`)
                 //         : talk(tm(wL.dicesidesrange));
                 //     }
                 //     break;
                 // case "도박":
-                //     let userMoney = userDB[userName].money;
+                //     const userMoney = userDB[userName].money;
                 //     switch (userArguement) {
                 //         case "":
                 //             talk(tm(wL.emptymoney));
@@ -374,7 +382,7 @@ const observer = new MutationObserver(() => {
                 //             };
                 //             break;
                 //         default:
-                //             let gamblmoney = Number(noFirstMsg("도박 "))
+                //             const gamblmoney = Number(noFirstMsg("도박 "))
                 //             if (gamblmoney % 1 != 0) {
                 //                 talk(tm(wL.notmoney));
                 //             } else if (gamblmoney < 1000) {
@@ -401,9 +409,22 @@ const observer = new MutationObserver(() => {
                     talk("크아아아악");
                     life = false;
                     break;
+                case "\"소리 없는 죽음\"":
+                    life = false;
+                    break;
                 case "어이 살아라":
                     talk("지옥에서 돌아왔다...");
                     life = true;
+                    break;
+                case "\"소리 없는 부활\"":
+                    life = true;
+                    break;
+                case "...이 「비술」만은 쓰지 않으려고 했는데... 『소.멸.하.라.』":
+                    talk("큭... 오마에... 어째서...")
+                    observer.disconnect();
+                    break;
+                case "\"소리 없는 『소멸』\"":
+                    observer.disconnect();
                     break;
                 case "훠이":
                     if ($('.RoomBox')[0].style.display === 'block') $("#ExitBtn").trigger('click');

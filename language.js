@@ -63,10 +63,6 @@ window.localStorage.setItem('wL', JSON.stringify({
         banmo: "다른 사람이 게임 중이잖아 하여간 기다릴 줄을 몰라요 ㅋㅋㅋ",
         jonmo: "게임이 끝날 때까지 기다려 주세요. 제발."
     },
-    jaqwifail: {
-        banmo: "제한 시간이 지남.",
-        jonmo: "제한 시간이 지났습니다."
-    },
     tmupdate: {
         banmo: "반말 모드로 설정이 됨 ㅋ",
         jonmo: "존댓말 모드로 설정이 되었습니다."
