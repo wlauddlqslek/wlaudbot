@@ -9,7 +9,7 @@ const ws = new WebSocket(url);
 const jaqwiDB = JSON.parse(reader('./wlaudbot/jaqwiDB.json'))
 const wordDB = JSON.parse(reader('./wlaudbot/wordDB.json'))
 const wL = JSON.parse(reader('./wlaudbot/language.json'))
-let userDB = [...new Set(JSON.parse(reader('./wlaudbot/userDB.json')).split('\n'))].sort().sort((a, b) => b.length - a.length)
+let userDB = JSON.parse(reader('./wlaudbot/userDB.json'))
 let wlaudDB = JSON.parse(reader('./wlaudbot/wlaudDB.json'))
 
 let userMsg;
@@ -34,9 +34,14 @@ function writer(file, content) {
     fs.writeFileSync(file, content, 'utf8');
 }
 
+// 요청하는 함수
+function send(data) {
+    ws.send(JSON.stringify(data));
+}
+
 // 메시지를 보내주는 함수
 function talk(a) {
-    ws.send(JSON.stringify({type: 'talk', value: a}));
+    send({type: 'talk', value: a});
 }
 
 // 대화 모드에 해당하는 말을 뱉어주는 함수
@@ -356,6 +361,31 @@ ws.on('message', (data) => {
                         break;
                 }
             }
+
+            if (isWlaud) {
+                switch (userMsg) {
+                    case "핫하 죽어라":
+                        talk("크아아아악");
+                        life = false;
+                        break;
+                    case "어이 살아라":
+                        talk("지옥에서 돌아왔다...");
+                        life = true;
+                        break;
+                    case "소.멸.하.라.":
+                        talk("큭... 오마에... 어째서...");
+                        observer.disconnect();
+                        break;
+                    case "훠이":
+                        send({"type":"leave"});
+                        break;
+                };
+                switch (userCommand) {
+                    case "드루와":
+                        // if ($('.RoomBox')[0].style.display === 'none') $(`#room-${userArguement}`).trigger('click');
+                        break;
+                }
+            };
         }
     }
 });
