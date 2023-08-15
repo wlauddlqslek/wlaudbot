@@ -75,12 +75,12 @@ function jaum(str) {
 
 // userDB 업데이트
 function setUserDB() {
-    writer('userDB.json', JSON.stringify(userDB));
+    writer('./wlaudbot/userDB.json', JSON.stringify(userDB));
 }
 
 // wlaudDB 업데이트
 function setwlaudDB() {
-    writer('wlaudDB.json', JSON.stringify(wlaudDB));
+    writer('./wlaudbot/wlaudDB.json', JSON.stringify(wlaudDB));
 }
 
 ws.on('open', () => {
