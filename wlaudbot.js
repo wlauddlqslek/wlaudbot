@@ -1,35 +1,22 @@
 const WebSocket = require('ws');
 const fs = require('fs');
 
+const domain = 'safehosting.xyz';
+const lobbyPort = '2053';
+const roomPort = '2083';
 const key = '';
-let url;
-let ws;
+const wlaudKey = "discord-947498683300212757";
 
-const jaqwiDB = JSON.parse(reader('./wlaudbot/jaqwiDB.json'))
-const wordDB = JSON.parse(reader('./wlaudbot/wordDB.json'))
-const wL = JSON.parse(reader('./wlaudbot/language.json'))
-let userDB = JSON.parse(reader('./wlaudbot/userDB.json'))
-let wlaudDB = JSON.parse(reader('./wlaudbot/wlaudDB.json'))
+const jaqwiDB = JSON.parse(reader('./jaqwiDB.json'))
+const wordDB = JSON.parse(reader('./wordDB.json'))
+const wL = JSON.parse(reader('./language.json'))
+let userDB = JSON.parse(reader('./userDB.json'))
+let wlaudDB = JSON.parse(reader('./wlaudDB.json'))
 
-let userMsg;
-let userMsgs;
-let userCommand;
-let userArguement;
-let userId;
-let userName;
-let isHuman = true;
-let isWlaud = false;
 let jaqwiing = false;
-let jaqwiTheme;
 let jaqwiWord;
 let jaqwiFail;
 let life = true;
-
-// 웹소켓 이동
-function move(port, chan, room) {
-    url = `wss://safehosting.xyz:${port}/${key}${chan !== undefined ? `&${chan}&${room}` : ''}`;
-    ws = new WebSocket(url);
-}
 
 // 파일 읽기
 function reader(file) {
@@ -48,18 +35,18 @@ function send(w, data) {
 
 // 메시지를 보내주는 함수
 function talk(w, a) {
-    send(w, {type: 'talk', value: a});
+    if (life) send(w, {type: 'talk', value: a});
 }
 
 // 대화 모드에 해당하는 말을 뱉어주는 함수
-function tm(a) {
+function tm(userId, a) {
     return userDB[userId].talkmode == "banmo" ? a.banmo
     : userDB[userId].talkmode == "jonmo" ? a.jonmo
     : a.banmo;
 }
 
 // [이름]을 유저 이름으로 바꿔주는 함수
-function replaceName(str) {
+function replaceName(userName, str) {
     return str.replace(/\[이름\]/g, userName)
 }
 
@@ -80,35 +67,49 @@ function jaum(str) {
     return result;
 }
 
+// 레벨 계산
+function lv(exp) {
+    return Math.floor(exp / 1000) + 1
+}
+
+// 필요 경험치 계산
+function nextLvExp() {
+    return exp + 1000 - (exp % 1000)
+}
+
 // userDB 업데이트
 function setUserDB() {
-    writer('./wlaudbot/userDB.json', JSON.stringify(userDB));
+    writer('./userDB.json', JSON.stringify(userDB));
 }
 
 // wlaudDB 업데이트
 function setwlaudDB() {
-    writer('./wlaudbot/wlaudDB.json', JSON.stringify(wlaudDB));
+    writer('./wlaudDB.json', JSON.stringify(wlaudDB));
 }
 
 // 웹소켓 연결
-function newWs(w) {
-    w.on('open', () => {
+function newWs(port, chan = "", room = "") {
+    const url = `wss://${domain}:${port}/${key}${chan !== "" ? `&${chan}` : ''}${room !== "" ? `&${room}` : ''}`;
+    const ws = new WebSocket(url);
+
+    ws.on('open', () => {
         console.log('접속');
     });
 
-    w.on('message', (data) => {
+    ws.on('message', (data) => {
         const D = JSON.parse(data);
         console.log(D);
         if (D.type === 'chat' && D.notice === false) {
-            userMsg = D.value;
-            userMsgs = userMsg.split(' ');
-            userCommand = userMsgs[0];
-            userArguement = userMsgs.slice(1).join(' ');
-            userId = D.profile.id;
-            userName = D.profile.title;
-            isHuman = !([`guest__${key}`].includes(userId));
-            isWlaud = userId === "discord-947498683300212757";
-            date = new Date();
+            const userMsg = D.value;
+            const userMsgs = userMsg.split(' ');
+            const userCommand = userMsgs[0];
+            const userArguement = userMsgs.slice(1).join(' ');
+            const userId = D.profile.id;
+            const userName = D.profile.title;
+            const isHuman = !([key].includes(userId));
+            const isWlaud = userId === wlaudKey;
+            const date = new Date();
+
             if (isHuman) {        
                 if (!(userId in userDB)) {
                     userDB[userId] = {
@@ -119,19 +120,19 @@ function newWs(w) {
                         "money": 0,
                         "havejonmo": false,
                     };
-                    setUserDB();
                 } else {
                     userDB[userId].exp += 10;
                 }
 
                 if (life || isWlaud) {
                     switch (userCommand) {
-                        case "지명봇":
+                        case "지명봇": {
                             switch (userMsgs[1]) {
-                                case undefined:
-                                    talk(w, tm(wL.wlaudbot));
+                                case undefined: {
+                                    talk(ws, tm(userId, wL.wlaudbot));
                                     break;
-                                case "단어":
+                                }
+                                case "단어": {
                                     const wlaudbotAddWord = userMsgs[2];
                                     const wlaudbotAddWordMean = userMsgs.slice(3).join(' ')
                                     if(wlaudbotAddWordMean != "") {
@@ -143,277 +144,343 @@ function newWs(w) {
                                             "time": `${date.getFullYear()}년 ${date.getMonth()+1}월 ${date.getDate()}일 ${date.getHours()}시 ${date.getMinutes()}분 ${date.getSeconds()}초`,
                                             };
                                             setwlaudDB();
-                                            talk(w, tm(wL.wlauddaneook));
+                                            talk(ws, tm(userId, wL.wlauddaneook));
                                         } else {
-                                            talk(w, tm(wL.wlaudalready));
+                                            talk(ws, tm(userId, wL.wlaudalready));
                                         };
                                     } else {
-                                        talk(w, tm(wL.wlaudempty));
+                                        talk(ws, tm(userId, wL.wlaudempty));
                                     };
                                     break;
-                                case "삭제":
+                                }
+                                case "삭제": {
                                     const wlaudbotDeleteWord = userMsgs.slice(2).join(' ');
                                     if(wlaudbotDeleteWord in wlaudDB) {
                                         if(wlaudDB[wlaudbotDeleteWord].teacherId == userId || isWlaud) {
                                             delete wlaudDB[wlaudbotDeleteWord];
                                             setwlaudDB();
-                                            talk(w, tm(wL.wlauddeleteok));
+                                            talk(ws, tm(userId, wL.wlauddeleteok));
                                         } else {
-                                            talk(w, tm(wL.wlaudcantdelete));
+                                            talk(ws, tm(userId, wL.wlaudcantdelete));
                                         };
                                     } else {
-                                        talk(w, tm(wL.wlaudno));
+                                        talk(ws, tm(userId, wL.wlaudno));
                                     };
                                     break;
-                                case "정보":
+                                }
+                                case "정보": {
                                     const wlaudbotInfoWord = userMsgs.slice(2).join(' ');
                                     if (wlaudbotInfoWord in wlaudDB) {
                                         const wlaudbotInfoWordTeacher = wlaudDB[wlaudbotInfoWord].teacherName;
                                         const wlaudbotInfoWordTime = wlaudDB[wlaudbotInfoWord].time;
                                         switch (userDB[wlaudDB[wlaudbotInfoWord].teacher].talkmode) {
-                                            case "banmo":
-                                                talk(w, `알려준 놈: ${wlaudbotInfoWordTeacher}`);
-                                                talk(w, `알려준 시간: ${wlaudbotInfoWordTime}`);
+                                            case "banmo": {
+                                                talk(ws, `알려준 놈: ${wlaudbotInfoWordTeacher}`);
+                                                talk(ws, `알려준 시간: ${wlaudbotInfoWordTime}`);
                                                 break;
-                                            case "jonmo":
-                                                talk(w, `알려주신 분: ${wlaudbotInfoWordTeacher}`);
-                                                talk(w, `알려주신 시간: ${wlaudbotInfoWordTime}`);
+                                            }
+                                            case "jonmo": {
+                                                talk(ws, `알려주신 분: ${wlaudbotInfoWordTeacher}`);
+                                                talk(ws, `알려주신 시간: ${wlaudbotInfoWordTime}`);
                                                 break;
-                                            default:
-                                                talk(w, `알려준 놈: ${wlaudbotInfoWordTeacher}`);
-                                                talk(w, `알려준 시간: ${wlaudbotInfoWordTime}`);
+                                            }
+                                            default: {
+                                                talk(ws, `알려준 놈: ${wlaudbotInfoWordTeacher}`);
+                                                talk(ws, `알려준 시간: ${wlaudbotInfoWordTime}`);
+                                            }
                                         };
                                     } else {
-                                        talk(w, tm(wL.wlaudno));
+                                        talk(ws, tm(userId, wL.wlaudno));
                                     };
                                     break;
-                                default:
+                                }
+                                default: {
                                     const wlaudbotWord = userMsgs.slice(1).join(' ');
-                                    talk(w, (wlaudbotWord) in wlaudDB ? replaceName(wlaudDB[wlaudbotWord].title) : tm(wL.wlaudno));
+                                    talk(ws, (wlaudbotWord) in wlaudDB ? replaceName(userName, wlaudDB[wlaudbotWord].title) : tm(userId, wL.wlaudno));
+                                }
                             };
                             break;
-                        case "명령어":
+                        }
+                        case "명령어": {
                             switch (userArguement) {
                                 case "":
-                                case "1":
-                                    talk(w, `[명령어] 1페이지 | 3/5`)
-                                    talk(w, `정보 (이름): ${tm(wL.helpinfo)}`);
-                                    talk(w, `모드: ${tm(wL.helptm)}`);
-                                    talk(w, `상점: ${tm(wL.helpshop)}`);
-                                    talk(w, `명령어 (1/2/돈벌기/지명봇/정규식)${tm(wL.help)}`);
+                                case "1": {
+                                    talk(ws, `[명령어] 1페이지 | 3/5`)
+                                    talk(ws, `정보 (이름): ${tm(userId, wL.helpinfo)}`);
+                                    talk(ws, `모드: ${tm(userId, wL.helptm)}`);
+                                    talk(ws, `상점: ${tm(userId, wL.helpshop)}`);
+                                    talk(ws, `명령어 (1/2/돈벌기/지명봇/정규식)${tm(userId, wL.help)}`);
                                     break;
-                                case "2":
-                                    talk(w, `[명령어] 2페이지 | 5/5`)
-                                    talk(w, `랭킹 (페이지): ${tm(wL.helpranking)}`);
-                                    talk(w, `검색 (정규식) (페이지): ${tm(wL.helpsearch)}`);
-                                    talk(w, `명령어 (1/2/돈벌기/지명봇/정규식)${tm(wL.help)}`);
+                                }
+                                case "2": {
+                                    talk(ws, `[명령어] 2페이지 | 5/5`)
+                                    talk(ws, `랭킹 (페이지): ${tm(userId, wL.helpranking)}`);
+                                    talk(ws, `검색 (정규식) (페이지): ${tm(userId, wL.helpsearch)}`);
+                                    talk(ws, `명령어 (1/2/돈벌기/지명봇/정규식)${tm(userId, wL.help)}`);
                                     break;
-                                case "돈벌기":
-                                    talk(w, `[명령어] 돈벌기 페이지 | 1/1`)
-                                    talk(w, `자퀴: ${tm(wL.helpjaqwi)}`);
-                                    talk(w, `명령어 (1/2/돈벌기/지명봇/정규식)${tm(wL.help)}`);
+                                }
+                                case "돈벌기": {
+                                    talk(ws, `[명령어] 돈벌기 페이지 | 1/1`)
+                                    talk(ws, `자퀴: ${tm(userId, wL.helpjaqwi)}`);
+                                    talk(ws, `명령어 (1/2/돈벌기/지명봇/정규식)${tm(userId, wL.help)}`);
                                     break;
-                                case "지명봇":
-                                    talk(w, `[명령어] 지명봇 페이지 | 3/3`)
-                                    talk(w, `지명봇 (단어): ${tm(wL.helpwlaudbot)}`);
-                                    talk(w, `지명봇 단어 (단어) (뜻): ${tm(wL.helpwlaudbotdaneo)}`);
-                                    talk(w, `지명봇 정보 (단어): ${tm(wL.helpwlaudbotinfo)}`);
-                                    talk(w, `명령어 (1/2/돈벌기/지명봇/정규식)${tm(wL.help)}`);
+                                }
+                                case "지명봇": {
+                                    talk(ws, `[명령어] 지명봇 페이지 | 3/3`)
+                                    talk(ws, `지명봇 (단어): ${tm(userId, wL.helpwlaudbot)}`);
+                                    talk(ws, `지명봇 단어 (단어) (뜻): ${tm(userId, wL.helpwlaudbotdaneo)}`);
+                                    talk(ws, `지명봇 정보 (단어): ${tm(userId, wL.helpwlaudbotinfo)}`);
+                                    talk(ws, `명령어 (1/2/돈벌기/지명봇/정규식)${tm(userId, wL.help)}`);
                                     break;
-                                case "정규식":
-                                    talk(w, `[명령어] 정규식 페이지 | 검색 (정규식) (페이지)에 쓰이는 정규식입니다. | 3/3`)
-                                    talk(w, `^(단어): (단어)로 시작함. | (단어): (단어)가 포함됨. | (단어)$: (단어)로 끝남.　　　　　　　　　　　　　　　　 .*: 아무 단어가 있거나 없음. | (.): 아무 문자를 저장함. | \\1: 그 문자가 포함됨.`);
-                                    talk(w, ``);
-                                    talk(w, `예시1: ^이.*라.*어$ ->'이'로 시작하고 '라'가 2개 들어가고 '어'로 끝남.`);
-                                    talk(w, `예시2: ^(.).*\\1$ -> 시작 글자와 끝 글자가 같음.`);
-                                    talk(w, `명령어 (1/2/돈벌기/지명봇/정규식)${tm(wL.help)}`);
+                                }
+                                case "정규식": {
+                                    talk(ws, `[명령어] 정규식 페이지 | 검색 (정규식) (페이지)에 쓰이는 정규식입니다. | 3/3`)
+                                    talk(ws, `^(단어): (단어)로 시작함. | (단어): (단어)가 포함됨. | (단어)$: (단어)로 끝남.　　　　　　　　　　　　　　　　 .*: 아무 단어가 있거나 없음. | (.): 아무 문자를 저장함. | \\1: 그 문자가 포함됨.`);
+                                    talk(ws, ``);
+                                    talk(ws, `예시1: ^이.*라.*어$ ->'이'로 시작하고 '라'가 2개 들어가고 '어'로 끝남.`);
+                                    talk(ws, `예시2: ^(.).*\\1$ -> 시작 글자와 끝 글자가 같음.`);
+                                    talk(ws, `명령어 (1/2/돈벌기/지명봇/정규식)${tm(userId, wL.help)}`);
                                     break;
-                                default:
-                                    talk(w, tm(wL.nohelp));
+                                }
+                                default: {
+                                    talk(ws, tm(userId, wL.nohelp));
+                                }
                             };
                             break;
-                        case "자퀴":
+                        }
+                        case "자퀴": {
                             if (!jaqwiing) {
                                 jaqwiing = true;
 
-                                jaqwiTheme = random(Object.keys(jaqwiDB));
+                                const jaqwiTheme = random(Object.keys(jaqwiDB));
                                 jaqwiWord = random(jaqwiDB[jaqwiTheme].words);
                 
-                                jaqwiFail = setTimeout(function() {
+                                jaqwiFail = setTimeout(() => {
                                     jaqwiing = false;
-                                    talk(w, `타임 오버!`);
-                                    talk(w, `정답: ${jaqwiWord}`);
+                                    talk(ws, `타임 오버!`);
+                                    talk(ws, `정답: ${jaqwiWord}`);
                                 }, 10000);
                 
-                                talk(w, `<${jaqwiTheme}> ${jaum(jaqwiWord)} / 제한 시간 : 10초`)
+                                talk(ws, `<${jaqwiTheme}> ${jaum(jaqwiWord)} / 제한 시간 : 10초`)
                             } else {
-                                talk(w, tm(wL.jaqwiwait));
+                                talk(ws, tm(userId, wL.jaqwiwait));
                             }
                             break;
-                        case jaqwiWord:
+                        }
+                        case jaqwiWord: {
                             if (jaqwiing) {
                                 jaqwiing = false;
-                    
-                                
+
                                 userDB[userId].exp += 100;
                                 userDB[userId].money += 1000;
-                                setUserDB();
                     
                                 clearTimeout(jaqwiFail);
                     
-                                talk(w, `${userName}${tm(wL.nim)} 정답! Lv.${Math.floor(userDB[userId].exp / 1000) + 1} ${userDB[userId].exp}/${userDB[userId].exp + 1000 - (userDB[userId].exp % 1000)}점 (+100점)  / 돈: ${userDB[userId].money}원 (+1000원)`);
-                                talk(w, `정답: ${jaqwiWord}`);
+                                const user = userDB[userId];
+                                talk(ws, `${userName}${tm(userId, wL.nim)} 정답! Lv.${String(lv(user.exp))} ${String(user.exp)}/${String(nextLvExp(user.exp))}점 (+100점)  / 돈: ${String(user.money)}원 (+1000원)`);
+                                talk(ws, `정답: ${jaqwiWord}`);
                             };
                             break;
-                        case "정보":
+                        }
+                        case "정보": {
                             switch (userArguement) {
-                                case "":
-                                    const infouser = userDB[userId];
-                                    talk(w, `${userName}${tm(wL.nim)}의 정보`);
-                                    talk(w, `Lv.${Math.floor(infouser.exp / 1000) + 1} ${infouser.exp}/${infouser.exp + 1000 - (infouser.exp % 1000)}점`);
-                                    talk(w, `돈: ${infouser.money}원`);
+                                case "": {
+                                    const user = userDB[userId];
+                                    talk(ws, `${userName}${tm(userId, wL.nim)}의 정보`);
+                                    talk(ws, `Lv.${String(lv(user.exp))} ${String(user.exp)}/${String(nextLvExp(user.exp))}점`);
+                                    talk(ws, `돈: ${user.money}원`);
                                     break;
-                                default:
+                                }
+                                default: {
                                     if (userArguement in userDB) {
-                                        const infouser = userDB[userArguement];
-                                        talk(w, `${infouser.name}${tm(wL.nim)}의 정보`);
-                                        talk(w, `Lv.${Math.floor(infouser.exp / 1000) + 1} ${infouser.exp}/${infouser.exp + 1000 - (infouser.exp % 1000)}점`);
-                                        talk(w, `돈: ${infouser.money}원`);
+                                        const user = userDB[userArguement];
+                                        talk(ws, `${user.name}${tm(userId, wL.nim)}의 정보`);
+                                        talk(ws, `Lv.${String(lv(user.exp))} ${String(user.exp)}/${String(nextLvExp(user.exp))}점`);
+                                        talk(ws, `돈: ${user.money}원`);
                                     } else {
-                                        talk(w, tm(wL.infono));
+                                        talk(ws, tm(userId, wL.infono));
                                     };
+                                }
                             }
                             break;
-                        case "모드":
+                        }
+                        case "모드": {
+                            const user = userDB[userId];
                             switch (userArguement) {
-                                case "":
-                                    const isbanmo = userDB[userId].talkmode == "banmo" ? "[반모] (적용 중)" : "[반모]";
-                                    const isjonmo = userDB[userId].talkmode == "jonmo" ? "[존모] (적용 중)"
+                                case "": {
+                                    const isbanmo = user.talkmode == "banmo" ? "[반모] (적용 중)" : "[반모]";
+                                    const isjonmo = user.talkmode == "jonmo" ? "[존모] (적용 중)"
                                     : userDB[userId].havejonmo ? "[존모]"
                                     : "[존모] (미구입)";
-                                    talk(w, `[대화 모드] ㅣ 모드 (모드 이름)${tm(wL.tm)}`);
-                                    talk(w, `${isbanmo} / ${isjonmo}`);
+                                    talk(ws, `[대화 모드] ㅣ 모드 (모드 이름)${tm(userId, wL.tm)}`);
+                                    talk(ws, `${isbanmo} / ${isjonmo}`);
                                     break;
-                                case "반모":
+                                }
+                                case "반모": {
                                     userDB[userId].talkmode = "banmo"
-                                    setUserDB();
-                                    talk(w, tm(wL.tmupdate));
+                                    talk(ws, tm(userId, wL.tmupdate));
                                     break;
-                                case "존모":
-                                    if (userDB[userId].havejonmo == true) {
+                                }
+                                case "존모": {
+                                    if (user.havejonmo == true) {
                                         userDB[userId].talkmode = "jonmo"
-                                        setUserDB();
-                                        talk(w, tm(wL.tmupdate));
+                                        talk(ws, tm(userId, wL.tmupdate));
                                     } else {
-                                        talk(w, tm(wL.nohave));
+                                        talk(ws, tm(userId, wL.nohave));
                                     };
                                     break;
-                                default:
-                                    talk(w, tm(wL.notm));
+                                }
+                                default: {
+                                    talk(ws, tm(userId, wL.notm));
+                                }
                             };
                             break;
-                        case "상점":
-                            talk(w, `[상점] ㅣ 구입 (구입할 것)${tm(wL.shop)}`)
+                        }
+                        case "상점": {
+                            const user = userDB[userId];
+                            talk(ws, `[상점] ㅣ 구입 (구입할 것)${tm(userId, wL.shop)}`)
                             userDB[userId].havejonmo
-                            ? talk(w, `[존모] (구입 됨): 존댓말 모드`)
-                            : talk(w, `[존모]: 존댓말 모드${tm(wL.abletm)} / 5000원`);
+                            ? talk(ws, `[존모] (구입 됨): 존댓말 모드`)
+                            : talk(ws, `[존모]: 존댓말 모드${tm(userId, wL.abletm)} / 5000원`);
                             break;
-                        case "구입":
+                        }
+                        case "구입": {
+                            const user = userDB[userId];
                             switch (userArguement) {
-                                case "":
-                                    talk(w, `구입 (구입할 것)${tm(wL.shop)}`);
+                                case "": {
+                                    talk(ws, `구입 (구입할 것)${tm(userId, wL.shop)}`);
                                     break;
-                                case "존모":
-                                    if (userDB[userId].havejonmo == true) {
-                                        talk(w, tm(wL.alreadybuy));
+                                }
+                                case "존모": {
+                                    if (user.havejonmo == true) {
+                                        talk(ws, tm(userId, wL.alreadybuy));
                                     } else {
-                                        if (userDB[userId].money < 5000) {
-                                            talk(w, tm(wL.nomoney));
+                                        if (user.money < 5000) {
+                                            talk(ws, tm(userId, wL.nomoney));
                                         } else {
                                             userDB[userId].money -= 5000;
                                             userDB[userId].havejonmo = true;
-                                            talk(w, tm(wL.buy));
-                                            setUserDB();
+                                            talk(ws, tm(userId, wL.buy));
                                         };
                                     };
                                     break;
-                                default:
-                                    talk(w, tm(wL.noitem));
+                                }
+                                default: {
+                                    talk(ws, tm(userId, wL.noitem));
+                                }
                             };
                             break;
-                        case "랭킹":
-                            const rankingPage = userArguement || 1;
+                        }
+                        case "랭킹": {
+                            const rankingPage = Number(userArguement || 1);
                             if (rankingPage % 1 != 0 || rankingPage <= 0) {
-                                talk(w, tm(wL.wrongpage));
+                                talk(ws, tm(userId, wL.wrongpage));
                             } else {
-                                talk(w, `[랭킹] ${rankingPage}페이지 | ${rankingPage * 5 - 4}~${rankingPage * 5}위`);
+                                talk(ws, `[랭킹] ${rankingPage}페이지 | ${rankingPage * 5 - 4}~${rankingPage * 5}위`);
                                 Object.entries(userDB)
                                 .sort((a, b) => b[1].exp - a[1].exp)
                                 .slice(rankingPage * 5 - 5, rankingPage * 5)
                                 .forEach((item, index) => {
-                                    talk(w, `${rankingPage * 5 - 4 + index}위 ${item[1].name} Lv.${Math.floor(item[1].exp / 1000) + 1} ${item[1].exp}점`)
+                                    const user = item[1]
+                                    talk(ws, `${rankingPage * 5 - 4 + index}위 ${user.name} Lv.${String(lv(user.exp))} ${String(user.exp)}점`)
                                 });
                             }
                             break;
-                        case "검색":
-                            const searchPage = userMsgs[2] || 1;
+                        }
+                        case "검색": {
+                            const searchPage = Number(userMsgs[2] || 1);
                             if (searchPage % 1 != 0 || searchPage <= 0) {
-                                talk(w, tm(wL.wrongpage));
+                                talk(ws, tm(userId, wL.wrongpage));
                             } else {
                                 const words = wordDB.filter(str => new RegExp(userMsgs[1]).test(str))
-                                talk(w, `[검색] ${searchPage}페이지 | ${searchPage * 5 > words.length ? words.length : searchPage * 5}/${words.length}`);
+                                talk(ws, `[검색] ${searchPage}페이지 | ${searchPage * 5 > words.length ? words.length : searchPage * 5}/${words.length}`);
                                 words.slice(searchPage * 5 - 5, searchPage * 5)
                                 .forEach(item => {
-                                    talk(w, item);
+                                    talk(ws, item);
                                 });
                             }
                             break;
+                        }
+                        case "도박": {
+                            switch (userArguement) {
+                                case "": {
+                                    talk(ws, tm(userId, wL.emptymoney));
+                                    break;
+                                }
+                                case "올인": {
+                                    userDB[userId].money = 0;
+                                    talk(ws, `도박신고는 1336 ${userName}${tm(userId, wL.nim)}의 돈: 0원 (-${userArguement}원)`);
+                                    break;
+                                }
+                                default: {
+                                    const user = userDB[userId];
+                                    if (userArguement % 1 != 0) {
+                                        talk(ws, tm(userId, wL.notmoney));
+                                    } else if (userArguement < 1000) {
+                                        talk(ws, tm(userId, wL.mmoney));
+                                    } else if (userArguement > user.money) {
+                                        talk(ws, tm(userId, wL.lessmoney));
+                                    } else {
+                                        userDB[userId].money -= Number(userArguement);
+                                        talk(ws, `도박신고는 1336 ${userName}${tm(userId, wL.nim)}의 돈: ${String(user.money)}원 (-${userArguement}원)`);
+                                    }
+                                    break;
+                                }
+                            }
+                            break;
+                        }
                     }
                 }
 
                 if (isWlaud) {
                     switch (userMsg) {
-                        case "핫하 죽어라":
-                            talk(w, "크아아아악");
+                        case "핫하 죽어라": {
+                            talk(ws, "크아아아악");
                             life = false;
                             break;
-                        case "어이 살아라":
-                            talk(w, "지옥에서 돌아왔다...");
+                        }
+                        case "어이 살아라": {
                             life = true;
+                            talk(ws, "지옥에서 돌아왔다...");
                             break;
-                        case "소.멸.하.라.":
-                            talk(w, "큭... 오마에... 어째서...");
+                        }
+                        case "소.멸.하.라.": {
+                            talk(ws, "큭... 오마에... 어째서...");
                             observer.disconnect();
                             break;
-                        case "관전":
-                            send(w, {"type":"form","mode":"S"})
+                        }
+                        case "관전": {
+                            send(ws, {"type":"form","mode":"S"})
                             break;
-                        case "훠이":
-                            send(w, {"type":"leave"});
-                            w.close();
+                        }
+                        case "훠이": {
+                            send(ws, {"type":"leave"});
+                            ws.close();
                             return;
                             break;
+                        }
                     };
                     switch (userCommand) {
-                        case "드루와":
-                            send(w, {"type":"enter","id":userArguement});
-                            move('2083', '1', userArguement);
-                            newWs(ws);
+                        case "드루와": {
+                            send(ws, {"type":"enter","id":userArguement});
+                            newWs(roomPort, '1', userArguement);
                             break;
+                        }
                     }
                 };
             }
+
+            setUserDB();
         }
     });
 
-    w.on('close', () => {
+    ws.on('close', () => {
         console.log('접속 종료');
     });
 
-    w.on('error', (error) => {
+    ws.on('error', (error) => {
         console.error(error);
     });
 }
 
-move('2053');
-newWs(ws);
+newWs(lobbyPort);
