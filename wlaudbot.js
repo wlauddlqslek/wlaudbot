@@ -73,7 +73,7 @@ function lv(exp) {
 }
 
 // 필요 경험치 계산
-function nextLvExp() {
+function nextLvExp(exp) {
     return exp + 1000 - (exp % 1000)
 }
 
