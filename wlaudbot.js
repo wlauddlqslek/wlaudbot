@@ -4,14 +4,16 @@ const fs = require('fs');
 const domain = 'safehosting.xyz';
 const lobbyPort = '2053';
 const roomPort = '2083';
-const key = '';
-const wlaudKey = "discord-947498683300212757";
+const key = '봇의 세션';
+const myId = '봇의 ID';
+const botIds = [myId, 'discord-716255169226211328'];
+const wlaudIds = ['당신의 ID'];
 
-const jaqwiDB = JSON.parse(reader('./jaqwiDB.json'))
-const wordDB = JSON.parse(reader('./wordDB.json'))
-const wL = JSON.parse(reader('./language.json'))
-let userDB = JSON.parse(reader('./userDB.json'))
-let wlaudDB = JSON.parse(reader('./wlaudDB.json'))
+const jaqwiDB = JSON.parse(reader('./jaqwiDB.json'));
+const wordDB = JSON.parse(reader('./wordDB.json'));
+const wL = JSON.parse(reader('./language.json'));
+let userDB = JSON.parse(reader('./userDB.json'));
+let wlaudDB = JSON.parse(reader('./wlaudDB.json'));
 
 let jaqwiing = false;
 let jaqwiWord;
@@ -106,8 +108,8 @@ function newWs(port, chan = "", room = "") {
             const userArguement = userMsgs.slice(1).join(' ');
             const userId = D.profile.id;
             const userName = D.profile.title;
-            const isHuman = !([key].includes(userId));
-            const isWlaud = userId === wlaudKey;
+            const isHuman = !(botIds.includes(userId));
+            const isWlaud = (wlaudIds.includes(userId));
             const date = new Date();
 
             if (isHuman) {        
@@ -206,7 +208,7 @@ function newWs(port, chan = "", room = "") {
                                 case "":
                                 case "1": {
                                     talk(ws, `[명령어] 1페이지 | 3/5`)
-                                    talk(ws, `정보 (이름): ${tm(userId, wL.helpinfo)}`);
+                                    talk(ws, `정보 (id/이름): ${tm(userId, wL.helpinfo)}`);
                                     talk(ws, `모드: ${tm(userId, wL.helptm)}`);
                                     talk(ws, `상점: ${tm(userId, wL.helpshop)}`);
                                     talk(ws, `명령어 (1/2/돈벌기/지명봇/정규식)${tm(userId, wL.help)}`);
@@ -298,8 +300,15 @@ function newWs(port, chan = "", room = "") {
                                         talk(ws, `Lv.${String(lv(user.exp))} ${String(user.exp)}/${String(nextLvExp(user.exp))}점`);
                                         talk(ws, `돈: ${user.money}원`);
                                     } else {
-                                        talk(ws, tm(userId, wL.infono));
-                                    };
+                                        const user = Object.values(userDB).find(obj => obj.name === userArguement);
+                                        if (user) {
+                                            talk(ws, `${user.name}${tm(userId, wL.nim)}의 정보`);
+                                            talk(ws, `Lv.${String(lv(user.exp))} ${String(user.exp)}/${String(nextLvExp(user.exp))}점`);
+                                            talk(ws, `돈: ${user.money}원`);
+                                        } else {
+                                            talk(ws, tm(userId, wL.nouserinfo));
+                                        };
+                                    }
                                 }
                             }
                             break;
@@ -339,7 +348,7 @@ function newWs(port, chan = "", room = "") {
                         case "상점": {
                             const user = userDB[userId];
                             talk(ws, `[상점] ㅣ 구입 (구입할 것)${tm(userId, wL.shop)}`)
-                            userDB[userId].havejonmo
+                            user.havejonmo
                             ? talk(ws, `[존모] (구입 됨): 존댓말 모드`)
                             : talk(ws, `[존모]: 존댓말 모드${tm(userId, wL.abletm)} / 5000원`);
                             break;
@@ -446,11 +455,12 @@ function newWs(port, chan = "", room = "") {
                         }
                         case "소.멸.하.라.": {
                             talk(ws, "큭... 오마에... 어째서...");
-                            observer.disconnect();
+                            process.exit(0);
                             break;
                         }
                         case "관전": {
-                            send(ws, {"type":"form","mode":"S"})
+                            send(ws, {"type":"form","mode":"S"});
+                            talk(ws, "ㅇ");
                             break;
                         }
                         case "훠이": {
@@ -464,6 +474,30 @@ function newWs(port, chan = "", room = "") {
                         case "드루와": {
                             send(ws, {"type":"enter","id":userArguement});
                             newWs(roomPort, '1', userArguement);
+                            break;
+                        }
+                        case "방장내놔": {  
+                            switch (userArguement) {
+                                case "": {
+                                    send(ws, {"type":"handover","target":userId});
+                                    talk(ws, "옛다");
+                                    break;
+                                }
+                                default: {
+                                    if (userArguement in userDB) {
+                                        send(ws, {"type":"handover","target":userArguement});
+                                        talk(ws, "ㅇ");
+                                    } else {
+                                        const user = Object.values(userDB).find(obj => obj.name === userArguement);
+                                        if (user) {
+                                            send(ws, {"type":"handover","target":user.id});
+                                            talk(ws, "ㅇ");
+                                        } else {
+                                            talk(ws, tm(userId, wL.nouserinfo));
+                                        };
+                                    }
+                                }
+                            }
                             break;
                         }
                     }

@@ -75,7 +75,7 @@
         "banmo": "",
         "jonmo": "님"
    },
-    "infono": {
+    "nouserinfo": {
         "banmo": "그런 유저는 없어.",
         "jonmo": "등록되지 않은 유저의 id입니다."
    },
